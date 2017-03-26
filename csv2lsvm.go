@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -170,4 +172,19 @@ func writeLibSVMFile(filePath string, content *Section, options *writeOptions) e
 }
 
 func main() {
+	var output = flag.String("o", "out.svm",
+		"output file; if not provided, data is written to out.svm")
+	flag.Parse()
+	input := flag.Arg(0)
+	fmt.Println(input)
+	fmt.Println(*output)
+
+	section, err := readCSV(input, &readOptions{})
+	if err != nil {
+		panic(err)
+	}
+	err = writeLibSVMFile(*output, section, &writeOptions{})
+	if err != nil {
+		panic(err)
+	}
 }
