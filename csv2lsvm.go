@@ -11,7 +11,7 @@ import (
 )
 
 type Row struct {
-	RowNum   int
+	Empty    bool
 	Schema   []int
 	Features []float64
 	Label    float64
@@ -59,7 +59,7 @@ func readCSVRow(f *os.File) (*Row, error) {
 	var n int
 	var err error
 	var value float64
-	row := Row{RowNum: -1}
+	row := Row{Empty: true}
 	b := make([]byte, 1)
 	buffer := []byte{}
 	colNum := 0
@@ -76,7 +76,7 @@ func readCSVRow(f *os.File) (*Row, error) {
 		}
 		if b[0] == 44 || b[0] == 10 { // comma or newline
 			if len(buffer) != 0 {
-				row.RowNum = 0
+				row.Empty = false
 				value, err = strconv.ParseFloat(string(buffer), 64)
 				if err != nil {
 					// TODO: handle this, as it will happen whenever the CSV contains a value
@@ -133,7 +133,7 @@ func readCSV(filePath string, options *ReadOptions) (*Section, error) {
 		if err != nil {
 			panic("failure to read CSV row")
 		}
-		if row.RowNum == -1 {
+		if row.Empty == true {
 			break
 		}
 		rows = append(rows, *row)

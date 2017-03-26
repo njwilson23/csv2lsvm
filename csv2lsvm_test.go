@@ -23,13 +23,13 @@ func TestRowToString(t *testing.T) {
 	var row Row
 	var s string
 
-	row = Row{RowNum: 0, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10}
+	row = Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10}
 	s = row.ToString()
 	if s != "10.00 0:1.50 1:2.50 2:3.50\n" {
 		t.Fail()
 	}
 
-	row = Row{RowNum: 0, Schema: []int{1, 2}, Features: []float64{2.5, 3.5}, Label: -10}
+	row = Row{Empty: false, Schema: []int{1, 2}, Features: []float64{2.5, 3.5}, Label: -10}
 	s = row.ToString()
 	if s != "-10.00 1:2.50 2:3.50\n" {
 		t.Fail()
@@ -38,9 +38,9 @@ func TestRowToString(t *testing.T) {
 
 func TestWriteLibSVM(t *testing.T) {
 	section := Section{[]Row{
-		Row{RowNum: 0, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10},
-		Row{RowNum: 1, Schema: []int{0, 1, 2}, Features: []float64{2.5, 3.5, 1.5}, Label: 2.1},
-		Row{RowNum: 2, Schema: []int{0, 2}, Features: []float64{1.5, 2.5}, Label: -4}}}
+		Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10},
+		Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{2.5, 3.5, 1.5}, Label: 2.1},
+		Row{Empty: false, Schema: []int{0, 2}, Features: []float64{1.5, 2.5}, Label: -4}}}
 
 	writer := &mockWriter{[]byte{}}
 	buffer := bufio.NewWriter(writer)
@@ -55,9 +55,9 @@ func TestWriteLibSVM(t *testing.T) {
 
 func TestWriteLibSVMFile(t *testing.T) {
 	section := Section{[]Row{
-		Row{RowNum: 0, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10},
-		Row{RowNum: 1, Schema: []int{0, 1, 2}, Features: []float64{2.5, 3.5, 1.5}, Label: 2.1},
-		Row{RowNum: 2, Schema: []int{0, 2}, Features: []float64{1.5, 2.5}, Label: -4}}}
+		Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10},
+		Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{2.5, 3.5, 1.5}, Label: 2.1},
+		Row{Empty: false, Schema: []int{0, 2}, Features: []float64{1.5, 2.5}, Label: -4}}}
 
 	options := WriteOptions{false}
 
