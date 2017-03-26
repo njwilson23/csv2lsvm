@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"time"
 )
 
 var UNREADABLE_LABEL_ERROR = errors.New("unreadable label")
@@ -65,7 +66,7 @@ func (section *Section) WriteLibSVM(buffer *bufio.Writer) error {
 	return nil
 }
 
-func readCSVRow(f *os.File) (*Row, error) {
+func readCSVRow(f *bufio.Reader) (*Row, error) {
 	var n int
 	var err error
 	var value float64
@@ -116,13 +117,14 @@ func readCSV(filePath string, options *readOptions) (*Section, error) {
 	if err != nil {
 		panic("failure to open file for reading")
 	}
+	buffer := bufio.NewReader(f)
 
 	// count the number of rows
 	b := make([]byte, 1)
 	var n int
 	nRows := 1
 	for {
-		n, err = f.Read(b)
+		n, err = buffer.Read(b)
 		if n == 0 {
 			return &Section{}, io.EOF
 		}
@@ -138,7 +140,7 @@ func readCSV(filePath string, options *readOptions) (*Section, error) {
 	rows := []Row{}
 	rowCount := 0
 	for {
-		row, err = readCSVRow(f)
+		row, err = readCSVRow(buffer)
 		if err == UNREADABLE_LABEL_ERROR {
 			break
 		} else if err != nil {
@@ -179,12 +181,15 @@ func main() {
 	fmt.Println(input)
 	fmt.Println(*output)
 
+	fmt.Println(time.Now())
 	section, err := readCSV(input, &readOptions{})
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(time.Now())
 	err = writeLibSVMFile(*output, section, &writeOptions{})
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(time.Now())
 }
