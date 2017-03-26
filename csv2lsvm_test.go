@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"testing"
 )
 
@@ -59,7 +58,7 @@ func TestWriteLibSVMFile(t *testing.T) {
 		Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{2.5, 3.5, 1.5}, Label: 2.1},
 		Row{Empty: false, Schema: []int{0, 2}, Features: []float64{1.5, 2.5}, Label: -4}}}
 
-	options := WriteOptions{false}
+	options := writeOptions{false}
 
 	err := writeLibSVMFile("test.svm", &section, &options)
 	if err != nil {
@@ -67,8 +66,32 @@ func TestWriteLibSVMFile(t *testing.T) {
 	}
 }
 
+func float64SlicesEqual(a, b []float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func intSlicesEqual(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func TestReadCSV(t *testing.T) {
-	section, err := readCSV("test.csv", &ReadOptions{})
+	section, err := readCSV("test.csv", &readOptions{})
 	if err != nil {
 		t.Error()
 	}
@@ -77,5 +100,4 @@ func TestReadCSV(t *testing.T) {
 		fmt.Print(" ")
 		fmt.Println(row.Features)
 	}
-	fmt.Println(len(section.Rows))
 }

@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
 )
 
+var UNREADABLE_LABEL_ERROR = errors.New("unreadable label")
+
+// Row represents a line of numerical data from a CSV or libSVM file, mapping a series of
+// features to a label
 type Row struct {
 	Empty    bool
 	Schema   []int
@@ -17,6 +20,7 @@ type Row struct {
 	Label    float64
 }
 
+// ToString outputs a libSVM representation of a Row
 func (row *Row) ToString() string {
 	// TODO: implement variable precision
 	var buffer bytes.Buffer
@@ -31,20 +35,24 @@ func (row *Row) ToString() string {
 	return buffer.String()
 }
 
-type ReadOptions struct {
+type readOptions struct {
 	StartRow     int
 	NumberOfRows int
 	Columns      []int
 }
 
-type WriteOptions struct {
+type writeOptions struct {
 	Append bool
 }
 
+// Section is an array of Rows representing the contens of a file or a section
+// of a file
 type Section struct {
 	Rows []Row
 }
 
+// WriteLibSVM sends a libSVM-formatted representation of a Section to a
+// buffered Writer
 func (section *Section) WriteLibSVM(buffer *bufio.Writer) error {
 	var s string
 	for _, row := range section.Rows {
@@ -74,35 +82,34 @@ func readCSVRow(f *os.File) (*Row, error) {
 		if n == 0 {
 			return &row, nil
 		}
-		if b[0] == 44 || b[0] == 10 { // comma or newline
+		if b[0] == ',' || b[0] == '\n' { // comma or newline
 			if len(buffer) != 0 {
 				row.Empty = false
 				value, err = strconv.ParseFloat(string(buffer), 64)
-				if err != nil {
-					// TODO: handle this, as it will happen whenever the CSV contains a value
-					// unlike a float
-					panic(fmt.Sprintf("failure parsing float: '%s'", string(buffer)))
-				}
-				if colNum == 0 {
-					row.Label = value
-				} else {
-					row.Schema = append(row.Schema, colNum)
-					row.Features = append(row.Features, value)
+				if err == nil {
+					if colNum == 0 {
+						row.Label = value
+					} else {
+						row.Schema = append(row.Schema, colNum)
+						row.Features = append(row.Features, value)
+					}
+				} else if colNum == 0 {
+					return &row, UNREADABLE_LABEL_ERROR
 				}
 				colNum++
 				buffer = buffer[:0]
 			}
-		} else if b[0] != 32 && b[0] != 116 { // exclude whitespace
+		} else if b[0] != ' ' && b[0] != '\n' && b[0] != '\r' { // exclude whitespace
 			buffer = append(buffer, b...)
 		}
 
-		if b[0] == 10 { // newline
+		if b[0] == '\n' { // newline
 			return &row, nil
 		}
 	}
 }
 
-func readCSV(filePath string, options *ReadOptions) (*Section, error) {
+func readCSV(filePath string, options *readOptions) (*Section, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		panic("failure to open file for reading")
@@ -115,11 +122,11 @@ func readCSV(filePath string, options *ReadOptions) (*Section, error) {
 	for {
 		n, err = f.Read(b)
 		if n == 0 {
-			return &Section{}, errors.New("end of file encountered unexpectedly")
+			return &Section{}, io.EOF
 		}
-		if b[0] == 44 {
+		if b[0] == ',' {
 			nRows++
-		} else if b[0] == 10 {
+		} else if b[0] == '\n' {
 			break
 		}
 	}
@@ -130,10 +137,11 @@ func readCSV(filePath string, options *ReadOptions) (*Section, error) {
 	rowCount := 0
 	for {
 		row, err = readCSVRow(f)
-		if err != nil {
+		if err == UNREADABLE_LABEL_ERROR {
+			break
+		} else if err != nil {
 			panic("failure to read CSV row")
-		}
-		if row.Empty == true {
+		} else if row.Empty == true {
 			break
 		}
 		rows = append(rows, *row)
@@ -145,7 +153,7 @@ func readCSV(filePath string, options *ReadOptions) (*Section, error) {
 	return &Section{rows}, nil
 }
 
-func writeLibSVMFile(filePath string, content *Section, options *WriteOptions) error {
+func writeLibSVMFile(filePath string, content *Section, options *writeOptions) error {
 	f, err := os.Create(filePath)
 	if err != nil {
 		panic("failure to create file for writing")
