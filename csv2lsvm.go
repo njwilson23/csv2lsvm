@@ -66,26 +66,22 @@ func (section *Section) WriteLibSVM(buffer *bufio.Writer) error {
 	return nil
 }
 
-func readCSVRow(f *bufio.Reader) (*Row, error) {
-	var n int
+func readCSVRow(readBuffer *bufio.Reader) (*Row, error) {
 	var err error
 	var value float64
 	row := Row{Empty: true}
-	b := make([]byte, 1)
 	buffer := []byte{}
+
+	line, err := readBuffer.ReadString('\n')
+	if err == io.EOF && len(buffer) == 0 {
+		return &row, io.EOF
+	} else if err != nil {
+		panic(err)
+	}
+
 	colNum := 0
-	for {
-		n, err = f.Read(b)
-		if err != nil {
-			if err == io.EOF {
-				return &row, nil
-			}
-			return &row, err
-		}
-		if n == 0 {
-			return &row, nil
-		}
-		if b[0] == ',' || b[0] == '\n' { // comma or newline
+	for i, r := range line {
+		if r == ',' || i == len(line)-1 {
 			if len(buffer) != 0 {
 				row.Empty = false
 				value, err = strconv.ParseFloat(string(buffer), 64)
@@ -102,14 +98,11 @@ func readCSVRow(f *bufio.Reader) (*Row, error) {
 				colNum++
 				buffer = buffer[:0]
 			}
-		} else if b[0] != ' ' && b[0] != '\n' && b[0] != '\r' { // exclude whitespace
-			buffer = append(buffer, b...)
-		}
-
-		if b[0] == '\n' { // newline
-			return &row, nil
+		} else if r != ' ' && r != '\t' && r != '\r' { // exclude whitespace
+			buffer = append(buffer, byte(r))
 		}
 	}
+	return &row, nil
 }
 
 func readCSV(filePath string, options *readOptions) (*Section, error) {
@@ -141,12 +134,12 @@ func readCSV(filePath string, options *readOptions) (*Section, error) {
 	rowCount := 0
 	for {
 		row, err = readCSVRow(buffer)
-		if err == UNREADABLE_LABEL_ERROR {
+		if err == io.EOF || err == UNREADABLE_LABEL_ERROR {
+			break
+		} else if row.Empty == true {
 			break
 		} else if err != nil {
 			panic("failure to read CSV row")
-		} else if row.Empty == true {
-			break
 		}
 		rows = append(rows, *row)
 		rowCount++
@@ -161,7 +154,6 @@ func writeLibSVMFile(filePath string, content *Section, options *writeOptions) e
 	f, err := os.Create(filePath)
 	if err != nil {
 		panic("failure to create file for writing")
-		//return err
 	}
 	defer f.Close()
 
