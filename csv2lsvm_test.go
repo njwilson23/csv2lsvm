@@ -95,9 +95,19 @@ func TestReadCSV(t *testing.T) {
 	if err != nil {
 		t.Error()
 	}
-	for _, row := range section.Rows {
-		fmt.Print(row.Label)
-		fmt.Print(" ")
-		fmt.Println(row.Features)
+	if len(section.Rows) != 6 {
+		t.Fail()
+	}
+	if !float64SlicesEqual(section.Rows[0].Features, []float64{1, 2, 3}) {
+		t.Fail()
+	}
+	if !float64SlicesEqual(section.Rows[5].Features, []float64{-1, 0.5, 0.75}) {
+		t.Fail()
+	}
+	if !intSlicesEqual(section.Rows[0].Schema, []int{1, 2, 3}) {
+		t.Fail()
+	}
+	if !intSlicesEqual(section.Rows[1].Schema, []int{1, 3}) {
+		t.Fail()
 	}
 }
