@@ -13,6 +13,7 @@ import (
 )
 
 var UNREADABLE_LABEL_ERROR = errors.New("unreadable label")
+var CSV_READ_ERROR = errors.New("failure to read CSV row")
 
 // Row represents a line of numerical data from a CSV or libSVM file, mapping a series of
 // features to a label
@@ -74,10 +75,8 @@ func readCSVRow(readBuffer *bufio.Reader) (*Row, error) {
 	buffer := []byte{}
 
 	line, err := readBuffer.ReadString('\n')
-	if err == io.EOF && len(buffer) == 0 {
-		return &row, io.EOF
-	} else if err != nil {
-		panic(err)
+	if err != nil {
+		return &row, err
 	}
 
 	colNum := 0
@@ -115,7 +114,7 @@ func readCSVRow(readBuffer *bufio.Reader) (*Row, error) {
 func readCSV(filePath string, options *readOptions) (*Section, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
-		panic("failure to open file for reading")
+		return &Section{}, err
 	}
 	buffer := bufio.NewReader(f)
 
@@ -146,7 +145,7 @@ func readCSV(filePath string, options *readOptions) (*Section, error) {
 		} else if row.Empty == true {
 			break
 		} else if err != nil {
-			panic("failure to read CSV row")
+			return &Section{}, errors.New(fmt.Sprintf("failure to read CSV row %d", rowCount))
 		}
 		rows = append(rows, *row)
 		rowCount++
@@ -160,7 +159,7 @@ func readCSV(filePath string, options *readOptions) (*Section, error) {
 func writeLibSVMFile(filePath string, content *Section, options *writeOptions) error {
 	f, err := os.Create(filePath)
 	if err != nil {
-		panic("failure to create file for writing")
+		return err
 	}
 	defer f.Close()
 
@@ -183,13 +182,17 @@ func main() {
 
 	fmt.Println(time.Now())
 	section, err := readCSV(input, &readOptions{})
-	if err != nil {
-		panic(err)
-	}
 	fmt.Println(time.Now())
+	if err != nil {
+		fmt.Println("failure to read CSV")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	err = writeLibSVMFile(*output, section, &writeOptions{Precision: *precision})
-	if err != nil {
-		panic(err)
-	}
 	fmt.Println(time.Now())
+	if err != nil {
+		fmt.Println("failure to write libSVM file")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
