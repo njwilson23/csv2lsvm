@@ -24,28 +24,29 @@ type Row struct {
 }
 
 // ToString outputs a libSVM representation of a Row
-func (row *Row) ToString() string {
+func (row *Row) ToString(precision int) string {
 	// TODO: implement variable precision
 	var buffer bytes.Buffer
-	buffer.WriteString(strconv.FormatFloat(row.Label, 'f', 2, 64))
+	buffer.WriteString(strconv.FormatFloat(row.Label, 'f', precision, 64))
 	for i, feature := range row.Features {
 		buffer.WriteRune(' ')
 		buffer.WriteString(strconv.Itoa(row.Schema[i]))
 		buffer.WriteRune(':')
-		buffer.WriteString(strconv.FormatFloat(feature, 'f', 2, 64))
+		buffer.WriteString(strconv.FormatFloat(feature, 'f', precision, 64))
 	}
 	buffer.WriteRune('\n')
 	return buffer.String()
 }
 
 type readOptions struct {
-	StartRow     int
+	StartRow     int // not implemented
 	NumberOfRows int
-	Columns      []int
+	Columns      []int // not implemented
 }
 
 type writeOptions struct {
-	Append bool
+	Precision int
+	Append    bool // not implemented
 }
 
 // Section is an array of Rows representing the contens of a file or a section
@@ -56,10 +57,10 @@ type Section struct {
 
 // WriteLibSVM sends a libSVM-formatted representation of a Section to a
 // buffered Writer
-func (section *Section) WriteLibSVM(buffer *bufio.Writer) error {
+func (section *Section) WriteLibSVM(buffer *bufio.Writer, precision int) error {
 	var s string
 	for _, row := range section.Rows {
-		s = row.ToString()
+		s = row.ToString(precision)
 		buffer.WriteString(s)
 	}
 	buffer.Flush()
@@ -80,27 +81,33 @@ func readCSVRow(readBuffer *bufio.Reader) (*Row, error) {
 	}
 
 	colNum := 0
-	for i, r := range line {
-		if r == ',' || i == len(line)-1 {
+	lineLength := len(line)
+	for i, rn := range line {
+
+		if rn == ',' || i == lineLength-1 {
 			if len(buffer) != 0 {
 				row.Empty = false
 				value, err = strconv.ParseFloat(string(buffer), 64)
 				if err == nil {
-					if colNum == 0 {
-						row.Label = value
-					} else {
+					if colNum != 0 {
 						row.Schema = append(row.Schema, colNum)
 						row.Features = append(row.Features, value)
+					} else {
+						row.Label = value
 					}
 				} else if colNum == 0 {
 					return &row, UNREADABLE_LABEL_ERROR
 				}
-				colNum++
 				buffer = buffer[:0]
 			}
-		} else if r != ' ' && r != '\t' && r != '\r' { // exclude whitespace
-			buffer = append(buffer, byte(r))
+		} else if rn != ' ' && rn != '\t' && rn != '\r' { // exclude whitespace
+			buffer = append(buffer, byte(rn))
 		}
+
+		if rn == ',' {
+			colNum++
+		}
+
 	}
 	return &row, nil
 }
@@ -158,7 +165,7 @@ func writeLibSVMFile(filePath string, content *Section, options *writeOptions) e
 	defer f.Close()
 
 	buffer := bufio.NewWriter(f)
-	err = content.WriteLibSVM(buffer)
+	err = content.WriteLibSVM(buffer, options.Precision)
 	if err != nil {
 		return err
 	}
@@ -166,6 +173,7 @@ func writeLibSVMFile(filePath string, content *Section, options *writeOptions) e
 }
 
 func main() {
+	var precision = flag.Int("p", 4, "decimal precision")
 	var output = flag.String("o", "out.svm",
 		"output file; if not provided, data is written to out.svm")
 	flag.Parse()
@@ -179,7 +187,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(time.Now())
-	err = writeLibSVMFile(*output, section, &writeOptions{})
+	err = writeLibSVMFile(*output, section, &writeOptions{Precision: *precision})
 	if err != nil {
 		panic(err)
 	}
