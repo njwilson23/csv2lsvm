@@ -26,7 +26,6 @@ type Row struct {
 
 // ToString outputs a libSVM representation of a Row
 func (row *Row) ToString(precision int) string {
-	// TODO: implement variable precision
 	var buffer bytes.Buffer
 	buffer.WriteString(strconv.FormatFloat(row.Label, 'f', precision, 64))
 	for i, feature := range row.Features {
@@ -172,13 +171,31 @@ func writeLibSVMFile(filePath string, content *Section, options *writeOptions) e
 }
 
 func main() {
-	var precision = flag.Int("p", 4, "decimal precision")
-	var output = flag.String("o", "out.svm",
-		"output file; if not provided, data is written to out.svm")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, `Usage: csv2lsvm [-o <output>] [-p <precision>] <input>
+       csv2lsvm -h
+`)
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, `  input string
+	path to the input CSV
+`)
+	}
+
+	var precision = flag.Int("p", -1, "specifies a fixed decimal precision")
+	var output = flag.String("o", "out.svm", "path to the output file")
+
 	flag.Parse()
+
 	input := flag.Arg(0)
-	fmt.Println(input)
-	fmt.Println(*output)
+
+	if input == "" {
+		fmt.Fprintf(os.Stderr, "no input file path provided\n")
+		flag.Usage()
+		os.Exit(0)
+	}
+
+	fmt.Println(fmt.Sprintf("reading from:  %s", input))
+	fmt.Println(fmt.Sprintf("writing to:    %s", *output))
 
 	fmt.Println(time.Now())
 	section, err := readCSV(input, &readOptions{})

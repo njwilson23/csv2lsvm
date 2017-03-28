@@ -24,8 +24,14 @@ func TestRowToString(t *testing.T) {
 	var s string
 
 	row = Row{Empty: false, Schema: []int{0, 1, 2}, Features: []float64{1.5, 2.5, 3.5}, Label: 10}
+
 	s = row.ToString(2)
 	if s != "10.00 0:1.50 1:2.50 2:3.50\n" {
+		t.Fail()
+	}
+
+	s = row.ToString(-1)
+	if s != "10 0:1.5 1:2.5 2:3.5\n" {
 		t.Fail()
 	}
 
